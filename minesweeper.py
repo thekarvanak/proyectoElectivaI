@@ -1,4 +1,5 @@
 import random
+import itertools
 
 
 class Board:
@@ -106,7 +107,7 @@ class Board:
             string_rep += ' |'.join(cells)
             string_rep += ' |\n'
 
-        str_len = int(len(string_rep) / self.dim_size)
+        str_len = (3+1) * self.dim_size - self.dim_size // 2
         string_rep = indices_row + '-' * str_len + '\n' + string_rep + '-' * str_len
 
         return string_rep
@@ -128,7 +129,10 @@ def play(dim_size=10, num_bombs=10):
             break
 
     if safe:
-        print("Felicidades!!, ganaste!!")
+        colors = ['\033[3{}m{{}}\033[0m'.format(n) for n in range(1, 7)]
+        rainbow = itertools.cycle(colors)
+        letters = [next(rainbow).format(L) for L in 'Felicidades!!, ganaste!!']
+        print(''.join(letters))
     else:
         print("Maldito perdedor!!")
         board.dug = [(r, c) for r in range(board.dim_size) for c in range(board.dim_size)]

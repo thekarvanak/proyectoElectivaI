@@ -1,3 +1,4 @@
+import itertools
 # from selenium import webdriver
 # import time
 
@@ -16,6 +17,11 @@ poblacion = 7400
 
 n = (z**2 * 0.5 * 0.5) / (0.1 ** 2)
 n_adj = n / (1 + (n-1)/poblacion)
+
+colors = ['\033[3{}m{{}}\033[0m'.format(n) for n in range(1,7)]
+rainbow = itertools.cycle(colors)
+letters = [next(rainbow).format(L) for L in 'Hello World']
+print(''.join(letters))
 
 print(f"muestra inicial = {n}")
 print(f"muestra ajustada = {n_adj}")
