@@ -1,14 +1,6 @@
 import random
 
-# print('\033[31m' + 'some red text' + '\033[39m' + '\033[32m' + "color???" + '\033[39m')
-colores = {
-    0: 39,
-    1: 36,
-    2: 32,
-    3: 31,
-    4: 34,
-    5: 33
-}
+# print('\033[31m' + 'some red text' + '\033[39m' + '\033[32m' + "color???")
 
 
 class Board:
@@ -72,22 +64,32 @@ class Board:
         return True
 
     def __str__(self):
+        colores = {
+            0: 39,
+            1: 36,
+            2: 32,
+            3: 31,
+            4: 34,
+            5: 33,
+            '*': 35
+        }
         visible_board = [[None for _ in range(self.dim_size)] for _ in range(self.dim_size)]
         for row in range(self.dim_size):
             for col in range(self.dim_size):
                 if (row, col) in self.dug:
-                    # visible_board[row][col] = '\033[31m' + str(self.board[row][col]) + '\033[39m'
-                    visible_board[row][col] = str(self.board[row][col])
+                    visible_board[row][col] = '\033['+ str(colores[self.board[row][col]]) + 'm' + \
+                                              str(self.board[row][col]) + '\033[39m'
+                    # visible_board[row][col] = str(self.board[row][col])
                 else:
-                    # visible_board[row][col] = '\033[39m' + ' '
                     visible_board[row][col] = ' '
 
         string_rep = ''
         # obtiene el ancho de las cols para impresion
         widths = []
         for idx in range(self.dim_size):
-            columns = map(lambda x: x[idx], visible_board)
-            widths.append(len(max(columns, key=len)))
+            widths.append(1)
+#             columns = map(lambda x: x[idx], visible_board)
+#             widths.append(len(max(columns, key=len)))
 
         # muestra los strings csv
         indices = [i for i in range(self.dim_size)]
@@ -148,7 +150,7 @@ if __name__ == '__main__':
     if opc == 1:
         play(6, 6)
     elif opc == 2:
-        play()
+        play(10, 10)
     elif opc == 3:
         play(14, 14)
     else:
