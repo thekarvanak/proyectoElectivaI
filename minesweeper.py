@@ -1,7 +1,5 @@
 import random
 
-# print('\033[31m' + 'some red text' + '\033[39m' + '\033[32m' + "color???")
-
 
 class Board:
     def __init__(self, dim_size, num_bombs):
@@ -79,7 +77,6 @@ class Board:
                 if (row, col) in self.dug:
                     visible_board[row][col] = '\033['+ str(colores[self.board[row][col]]) + 'm' + \
                                               str(self.board[row][col]) + '\033[39m'
-                    # visible_board[row][col] = str(self.board[row][col])
                 else:
                     visible_board[row][col] = ' '
 
@@ -88,8 +85,6 @@ class Board:
         widths = []
         for idx in range(self.dim_size):
             widths.append(1)
-#             columns = map(lambda x: x[idx], visible_board)
-#             widths.append(len(max(columns, key=len)))
 
         # muestra los strings csv
         indices = [i for i in range(self.dim_size)]

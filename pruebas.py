@@ -1,25 +1,21 @@
-def dec2bin(n):
-    if n == 0:
-        return '0'
-    bin = ""
-    while n > 0:
-        bin += str(n % 2)
-        n = n // 2
+# from selenium import webdriver
+# import time
 
-    return bin[::-1]
+# driver = webdriver.Firefox()
+# driver.get("https://www.instagram.com")
 
+# ... tu código para interactuar con la página ...
 
-def bin2dec(b):
-    b = b[::-1]
-    r = 0
-    for i in range(len(b)):
-        r += int(b[i]) * 2**i
-    return r
+# time.sleep(10)  # Pausa durante 10 segundos
+# driver.quit()
 
+alpha = 0.05
+z = 1.96
+e = 0.1
+poblacion = 7400
 
-print(dec2bin(4))
-print(dec2bin(5))
-print(dec2bin(25))
-print(bin2dec('100'))
-print(bin2dec('101'))
-print(bin2dec('11001'))
+n = (z**2 * 0.5 * 0.5) / (0.1 ** 2)
+n_adj = n / (1 + (n-1)/poblacion)
+
+print(f"muestra inicial = {n}")
+print(f"muestra ajustada = {n_adj}")
