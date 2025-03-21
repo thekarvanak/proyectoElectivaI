@@ -11,6 +11,7 @@ class Board:
         self.assign_values_to_board()
 
         self.dug = set()  # si cava en 0, 0: self.dug = {(0, 0)}
+        self.bombs = set()
 
     def make_new_board(self):
         board = [[None for _ in range(self.dim_size)] for _ in range(self.dim_size)]
@@ -45,6 +46,13 @@ class Board:
 
         return num_neighbouring_bombs
 
+    def dig(self, row, col, bomb):
+        self.dug.add((row, col))
+        if (row, col) not in self.bombs:
+            self.bombs.add((row, col))
+
+        return True
+
     def dig(self, row, col):
         # Devuelve True si es un dig satisfactorio, False si es una bomba
         self.dug.add((row, col))
@@ -62,6 +70,10 @@ class Board:
 
         return True
 
+    def check_dig(self, row, col):
+        # return True if is an invalid dig
+        return row < 0 or row > self.dim_size or col < 0 or col > self.dim_size
+
     def __str__(self):
         colores = {
             0: 39,
@@ -76,8 +88,9 @@ class Board:
         for row in range(self.dim_size):
             for col in range(self.dim_size):
                 if (row, col) in self.dug:
-                    visible_board[row][col] = '\033['+ str(colores[self.board[row][col]]) + 'm' + \
-                                              str(self.board[row][col]) + '\033[39m'
+                    visible_board[row][col] = \
+'\033['+ str(colores[self.board[row][col]]) + 'm' + \
+str(self.board[row][col]) + '\033[39m'
                 else:
                     visible_board[row][col] = ' '
 
@@ -118,21 +131,22 @@ def play(dim_size=10, num_bombs=10):
     safe = True
     while len(board.dug) < board.dim_size ** 2 - num_bombs:
         print(board)
-        user_input = input("Para jugar, escribe 'fila, col' : ").replace(" ", "").split(",")
+        user_input = input("Para jugar, escribe 'fila, col': ").replace(" ", "").split(",")
         row, col = int(user_input[0]), int(user_input[1])
-        if row < 0 or row > dim_size or col < 0 or col > dim_size:
+        if board.check_dig(row, col):
             print("Locación inválida, inténtelo de nuevo")
             continue
 
         safe = board.dig(row, col)
+
         if not safe:
             break
 
     if safe:
         colors = ['\033[3{}m{{}}\033[0m'.format(n) for n in range(1, 7)]
         rainbow = itertools.cycle(colors)
-        letters = [next(rainbow).format(L) for L in 'Felicidades!!, ganaste!!']
-        print(''.join(letters))
+        chars = [next(rainbow).format(l) for l in 'Felicidades!!, ganaste!!']
+        print(''.join(chars))
     else:
         print("Maldito perdedor!!")
         board.dug = [(r, c) for r in range(board.dim_size) for c in range(board.dim_size)]
