@@ -1,5 +1,11 @@
 import pygame
 import random
+try:
+    import RPi.GPIO as GPIO
+    GPIO_AVAILABLE = True
+except ImportError:
+    GPIO_AVAILABLE = False
+    print("La librería RPi.GPIO no está disponible. El control de LEDs no funcionará.")
 
 # --- Definición de Colores ---
 BLANCO = (255, 255, 255)
@@ -7,21 +13,25 @@ GRIS_CLARO = (200, 200, 200)
 GRIS_OSCURO = (100, 100, 100)
 NEGRO = (0, 0, 0)
 AZUL = (0, 0, 255)
-VERDE = (0, 128, 0)
-ROJO = (255, 0, 0)
-MORADO = (128, 0, 128)
-CIAN = (0, 255, 255)
-AMARILLO = (255, 255, 0)
+VERDE_COLOR = (0, 128, 0)
+ROJO_COLOR = (255, 0, 0)
+AMARILLO_COLOR = (255, 255, 0)
+CIAN_COLOR = (128, 0, 128)
+MORADO_COLOR = (0, 255, 255)
 
 COLOR_NUMEROS = {
     1: AZUL,
-    2: VERDE,
-    3: ROJO,
-    4: MORADO,
-    5: CIAN,
-    6: AMARILLO,
+    2: VERDE_COLOR,
+    3: ROJO_COLOR,
+    4: CIAN_COLOR,
+    5: MORADO_COLOR,
+    6: AMARILLO_COLOR,
     0: GRIS_OSCURO
 }
+
+LED_AMARILLO_PIN = 17
+LED_VERDE_PIN = 27
+LED_ROJO_PIN = 22
 
 class Board:
     def __init__(self, dim_size, num_bombs):
@@ -30,7 +40,7 @@ class Board:
         self.board = self._make_new_board()
         self._assign_values_to_board()
         self.dug = set()
-        self.flags = set() # Para marcar posibles bombas
+        self.flags = set()
         self.game_over = False
 
     def _make_new_board(self):
@@ -74,7 +84,7 @@ class Board:
             return False
         elif self.board[row][col] > 0:
             return True
-        else: # self.board[row][col] == 0
+        else:
             for r in range(max(0, row - 1), min(self.dim_size - 1, row + 1) + 1):
                 for c in range(max(0, col - 1), min(self.dim_size - 1, col + 1) + 1):
                     if (r, c) not in self.dug:
@@ -103,25 +113,46 @@ class MinesweeperGame:
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption("Buscaminas")
         self.font = pygame.font.Font(None, 30)
-        self.game_started = False # Nuevo estado para controlar la pantalla inicial
+        self.game_started = False
+        self.playing = False # Nuevo estado para indicar si el juego está activo
+
+        if GPIO_AVAILABLE:
+            GPIO.setmode(GPIO.BCM) 
+            GPIO.setup(LED_AMARILLO_PIN, GPIO.OUT)
+            GPIO.setup(LED_VERDE_PIN, GPIO.OUT)
+            GPIO.setup(LED_ROJO_PIN, GPIO.OUT)
+            self.turn_off_leds()
+
+    def turn_on_led(self, pin):
+        if GPIO_AVAILABLE:
+            GPIO.output(pin, GPIO.HIGH)
+
+    def turn_off_led(self, pin):
+        if GPIO_AVAILABLE:
+            GPIO.output(pin, GPIO.LOW)
+
+    def turn_off_leds(self):
+        self.turn_off_led(LED_AMARILLO_PIN)
+        self.turn_off_led(LED_VERDE_PIN)
+        self.turn_off_led(LED_ROJO_PIN)
 
     def draw_grid(self):
         for row in range(self.dim_size):
             for col in range(self.dim_size):
                 rect = pygame.Rect(col * self.cell_size, row * self.cell_size, self.cell_size, self.cell_size)
-                pygame.draw.rect(self.screen, GRIS_CLARO, rect, 1) # Bordes de las celdas
-                pygame.draw.rect(self.screen, GRIS_OSCURO, rect) # Celdas sin descubrir
+                pygame.draw.rect(self.screen, GRIS_CLARO, rect, 1)
+                pygame.draw.rect(self.screen, GRIS_OSCURO, rect)
 
     def draw_board(self):
         for row in range(self.dim_size):
             for col in range(self.dim_size):
                 rect = pygame.Rect(col * self.cell_size, row * self.cell_size, self.cell_size, self.cell_size)
-                pygame.draw.rect(self.screen, GRIS_CLARO, rect, 1) # Bordes de las celdas
+                pygame.draw.rect(self.screen, GRIS_CLARO, rect, 1)
                 if (row, col) in self.board.dug:
                     value = self.board.board[row][col]
                     pygame.draw.rect(self.screen, BLANCO, rect)
                     if value == '*':
-                        pygame.draw.circle(self.screen, ROJO, rect.center, self.cell_size // 3)
+                        pygame.draw.circle(self.screen, ROJO_COLOR, rect.center, self.cell_size // 3)
                     elif value > 0:
                         text = self.font.render(str(value), True, COLOR_NUMEROS[value])
                         text_rect = text.get_rect(center=rect.center)
@@ -129,22 +160,26 @@ class MinesweeperGame:
                 else:
                     pygame.draw.rect(self.screen, GRIS_OSCURO, rect)
                     if (row, col) in self.board.flags:
-                        pygame.draw.polygon(self.screen, ROJO, [rect.topright, (rect.centerx + self.cell_size // 4, rect.centery - self.cell_size // 4), rect.bottomright])
+                        pygame.draw.polygon(self.screen, ROJO_COLOR, [rect.topright, (rect.centerx + self.cell_size // 4, rect.centery - self.cell_size // 4), rect.bottomright])
                         pygame.draw.line(self.screen, BLANCO, rect.topright, rect.bottomright, 2)
-
 
     def handle_click(self, pos, button):
         col = pos[0] // self.cell_size
         row = pos[1] // self.cell_size
         if not self.game_started:
-            self.game_started = True # El primer clic inicia el juego
-            self.board = Board(self.dim_size, self.num_bombs) # Generar el tablero al primer clic
-            self.board.dig(row, col) # Descubrir la primera celda
+            self.game_started = True
+            self.playing = True
+            self.board = Board(self.dim_size, self.num_bombs)
+            self.board.dig(row, col)
+            self.turn_on_led(LED_AMARILLO_PIN)
         else:
-            if button == 1: # Clic izquierdo
-                self.board.dig(row, col)
-            elif button == 3: # Clic derecho
-                self.board.toggle_flag(row, col)
+            if not self.board.game_over and not self.board.check_win():
+                self.playing = True
+                self.turn_on_led(LED_AMARILLO_PIN)
+                if button == 1:
+                    self.board.dig(row, col)
+                elif button == 3:
+                    self.board.toggle_flag(row, col)
 
     def run(self):
         running = True
@@ -159,24 +194,36 @@ class MinesweeperGame:
 
             self.screen.fill(GRIS_CLARO)
             if not self.game_started:
-                self.draw_grid() # Dibuja la cuadrícula en la pantalla inicial
+                self.draw_grid()
                 start_text = self.font.render("Haz clic para empezar", True, NEGRO)
                 text_rect = start_text.get_rect(center=(self.width // 2, self.height // 2))
                 self.screen.blit(start_text, text_rect)
+                self.turn_off_leds()
             else:
-                self.draw_board() # Dibuja el tablero durante el juego
+                self.draw_board()
                 if self.board.game_over:
-                    game_over_text = self.font.render("¡BOOM! Perdiste", True, ROJO)
+                    self.playing = False
+                    self.turn_off_led(LED_AMARILLO_PIN)
+                    self.turn_on_led(LED_ROJO_PIN)
+                    game_over_text = self.font.render("¡¡Maldito perdedor!!", True, ROJO_COLOR)
                     text_rect = game_over_text.get_rect(center=(self.width // 2, self.height // 2))
                     self.screen.blit(game_over_text, text_rect)
                 elif self.board.check_win():
-                    win_text = self.font.render("¡Ganaste!", True, VERDE)
+                    self.playing = False
+                    self.turn_off_led(LED_AMARILLO_PIN)
+                    self.turn_on_led(LED_VERDE_PIN)
+                    win_text = self.font.render("¡Ganaste!", True, VERDE_COLOR)
                     text_rect = win_text.get_rect(center=(self.width // 2, self.height // 2))
                     self.screen.blit(win_text, text_rect)
+                elif self.playing:
+                    self.turn_on_led(LED_AMARILLO_PIN)
+                else:
+                    self.turn_off_led(LED_AMARILLO_PIN) # Apaga el amarillo si no está jugando (ej: después de ganar/perder)
 
             pygame.display.flip()
 
-        pygame.quit()
+        if GPIO_AVAILABLE:
+            GPIO.cleanup() # Limpia los pines GPIO al cerrar Pygame
 
 if __name__ == '__main__':
     print("Bienvenido al proyecto Mineswepper")
